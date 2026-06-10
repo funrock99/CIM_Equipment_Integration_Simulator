@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import equipment, secs, linebot
+from app.routers import equipment, secs, linebot, rules
 from app.database import engine, Base
 
 # Create tables if they do not exist
@@ -8,6 +8,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CIM Equipment Integration Simulator API")
 
 app.include_router(equipment.router, prefix="/api/equipment", tags=["Equipment"])
+app.include_router(rules.router, prefix="/api/rules", tags=["Alarm Rules"])
 app.include_router(secs.router, prefix="/api/secs", tags=["SECS"])
 app.include_router(linebot.router, prefix="/api/linebot", tags=["Line Bot"])
 

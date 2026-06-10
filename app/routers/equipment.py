@@ -32,37 +32,7 @@ def register_equipment(eqp: schemas.EquipmentCreate, db: Session = Depends(get_d
 def get_all_equipment(db: Session = Depends(get_db)):
     return db.query(models.Equipment).all()
 
-# ================= Alarm Rules =================
-@router.post("/rules", response_model=schemas.AlarmRuleResponse)
-def create_alarm_rule(rule_data: schemas.AlarmRuleCreate, db: Session = Depends(get_db)):
-    new_rule = models.AlarmRule(
-        eqp_id=rule_data.eqp_id,
-        sensor_name=rule_data.sensor_name,
-        condition=rule_data.condition,
-        threshold_value=rule_data.threshold_value,
-        alarm_code=rule_data.alarm_code,
-        alarm_level=rule_data.alarm_level,
-        alarm_message=rule_data.alarm_message
-    )
-    db.add(new_rule)
-    db.commit()
-    db.refresh(new_rule)
-    return new_rule
 
-@router.get("/rules", response_model=List[schemas.AlarmRuleResponse])
-def get_alarm_rules(db: Session = Depends(get_db)):
-    return db.query(models.AlarmRule).all()
-
-@router.delete("/rules/{rule_id}")
-def delete_alarm_rule(rule_id: int, db: Session = Depends(get_db)):
-    rule = db.query(models.AlarmRule).filter(models.AlarmRule.id == rule_id).first()
-    if not rule:
-        raise HTTPException(status_code=404, detail="Rule not found")
-    db.delete(rule)
-    db.commit()
-    return {"message": "Rule deleted successfully"}
-
-# ================= Equipment Operations =================
 @router.get("/{eqp_id}", response_model=schemas.EquipmentResponse)
 def get_equipment(eqp_id: str, db: Session = Depends(get_db)):
     db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()

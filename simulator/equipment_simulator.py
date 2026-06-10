@@ -25,19 +25,20 @@ def register_equipments():
 
 def register_default_rules():
     try:
-        res = requests.get(f"{API_BASE_URL}/equipment/rules")
-        if res.status_code == 200 and len(res.json()) == 0:
+        res = requests.get(f"{API_BASE_URL}/rules")
+        rules = res.json() if res.status_code == 200 else []
+        if not any(r.get("sensor_name") == "Temperature" for r in rules):
             rule = {
                 "eqp_id": None,
                 "sensor_name": "Temperature",
                 "condition": ">",
                 "threshold_value": 85.0,
-                "alarm_code": "ALM_HIGH_TEMP",
+                "alarm_code": "0001",
                 "alarm_level": "WARNING",
-                "alarm_message": "Temperature exceeded threshold"
+                "alarm_message": "Temperature exceeded 85.0"
             }
-            requests.post(f"{API_BASE_URL}/equipment/rules", json=rule)
-            print("Registered default alarm rule for Temperature > 85.0")
+            requests.post(f"{API_BASE_URL}/rules", json=rule)
+            print("Default Alarm Rule registered.")
     except Exception as e:
         print(f"Failed to register default rule: {e}")
 

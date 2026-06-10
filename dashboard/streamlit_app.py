@@ -51,7 +51,7 @@ def set_sim_status(enabled):
 
 def get_rules():
     try:
-        res = requests.get(f"{API_URL}/equipment/rules")
+        res = requests.get(f"{API_URL}/rules")
         if res.status_code == 200:
             return res.json()
     except:
@@ -60,14 +60,14 @@ def get_rules():
 
 def create_rule(rule_data):
     try:
-        res = requests.post(f"{API_URL}/equipment/rules", json=rule_data)
+        res = requests.post(f"{API_URL}/rules", json=rule_data)
         return res.status_code == 200
     except:
         return False
 
 def delete_rule(rule_id):
     try:
-        res = requests.delete(f"{API_URL}/equipment/rules/{rule_id}")
+        res = requests.delete(f"{API_URL}/rules/{rule_id}")
         return res.status_code == 200
     except:
         return False
