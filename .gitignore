@@ -3,3 +3,17 @@ gemini.md
 CIM_Equipment_Integration_Simulator_完整規格書.md
 start.bat
 step.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+*.db
+*.sqlite3
+
+# Virtual Environment
+venv/
+.venv/
+env/
