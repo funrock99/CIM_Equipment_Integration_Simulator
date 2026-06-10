@@ -56,26 +56,28 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 
 ## Quick Start
 
-### 啟動步驟
-1. Start database and API with Docker Compose:
+### 啟動步驟 (手動執行)
+請開啟三個獨立的終端機視窗，分別執行以下指令來啟動系統的三個核心組件：
+
+1. **啟動 CIM Host API (FastAPI)**
    ```bash
-   docker-compose up -d --build
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
 
-2. Start Equipment Simulator:
+2. **啟動 Equipment Simulator (設備模擬器)**
+   （請等待 API 啟動完成後再執行）
    ```bash
-   pip install requests
    python simulator/equipment_simulator.py
    ```
 
-3. Start Dashboard:
+3. **啟動 Dashboard (監控面板)**
    ```bash
-   pip install streamlit pandas
    streamlit run dashboard/streamlit_app.py
    ```
 
-4. API Documentation:
-   http://localhost:8000/docs
+4. **存取系統**
+   - API 文件 (Swagger): http://localhost:8000/docs
+   - 監控儀表板 (Dashboard): http://localhost:8501
 
 ## Environment Setup (環境變數設定)
 
