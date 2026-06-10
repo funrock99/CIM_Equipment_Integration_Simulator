@@ -1,0 +1,11 @@
+fastapi[all]
+uvicorn
+sqlalchemy
+psycopg2-binary
+pydantic
+pydantic-settings
+python-dotenv
+streamlit
+line-bot-sdk
+requests
+pandas
