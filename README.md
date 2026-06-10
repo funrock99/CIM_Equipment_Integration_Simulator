@@ -42,7 +42,7 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 ## Features
 - **Equipment Simulator**: 模擬多台封測/半導體設備定期上拋 RUN/IDLE/DOWN/PM 狀態與感測資料。
 - **CIM Host API**: 接收設備狀態、事件、Alarm、Sensor Data 與 Remote Command。
-- **Alarm Rule Engine**: 提供 API 動態設定警報規則，當設備上拋資料時，由 CIM Host 主動判定是否觸發 Alarm。
+- **Alarm Rule Engine**: 提供獨立的系統級 API (`/api/rules`) 以動態設定警報規則。當設備上拋資料時，CIM Host 會主動判定是否觸發異常。系統同時提供 **Dashboard 圖形化專屬面板**，讓使用者輕鬆新增與刪除警報邏輯，無須撰寫程式碼。
 - **SECS/GEM-style Message**: 模擬常見訊息流程如 S6F11 Event Report, S5F1 Alarm Report, S2F41 Remote Command。
 - **Simulator Control Switch**: 支援從 Dashboard 遠端開啟/關閉模擬器上拋，便於展示並大幅降低雲端部署成本。
 - **Dashboard**: Streamlit 建立的設備狀態監控、Alarm 清單、Sensor 趨勢。
