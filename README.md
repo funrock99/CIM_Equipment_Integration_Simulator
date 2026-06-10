@@ -56,8 +56,19 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 
 ## Quick Start
 
-### 啟動步驟 (手動執行)
-請開啟三個獨立的終端機視窗，分別執行以下指令來啟動系統的三個核心組件：
+### 啟動步驟
+
+本專案提供 **Docker** 與 **本機手動** 兩種啟動方式供您選擇。
+
+#### 方式一：使用 Docker Compose 啟動 (推薦)
+若您已安裝 Docker 與 Docker Compose，可直接在專案根目錄執行以下指令啟動資料庫與 API：
+```bash
+docker-compose up -d --build
+```
+接著，您只需在本地環境分別啟動設備模擬器與監控面板（請參考下方 **方式二** 中的步驟 2 與步驟 3）。
+
+#### 方式二：純本機手動啟動
+如果您不使用 Docker，請開啟三個獨立的終端機視窗，分別執行以下指令來啟動系統的三個核心組件：
 
 1. **啟動 CIM Host API (FastAPI)**
    ```bash
@@ -75,9 +86,10 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
    streamlit run dashboard/streamlit_app.py
    ```
 
-4. **存取系統**
-   - API 文件 (Swagger): http://localhost:8000/docs
-   - 監控儀表板 (Dashboard): http://localhost:8501
+#### 存取系統
+待服務啟動完成後，可透過瀏覽器前往：
+- API 文件 (Swagger): http://localhost:8000/docs
+- 監控儀表板 (Dashboard): http://localhost:8501
 
 ## Environment Setup (環境變數設定)
 
