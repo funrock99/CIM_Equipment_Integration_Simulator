@@ -56,14 +56,7 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 
 ## Quick Start
 
-### Windows One-Click Start
-如果你是在 Windows 環境下，可以直接執行根目錄的批次檔：
-```bash
-start.bat
-```
-這會自動啟動 API、模擬器與監控儀表板。
-
-### 手動啟動步驟
+### 啟動步驟
 1. Start database and API with Docker Compose:
    ```bash
    docker-compose up -d --build
