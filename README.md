@@ -3,7 +3,7 @@
 半導體設備 CIM 整合模擬系統
 
 ## Project Overview
-結合封測廠工作經驗與企業系統開發經驗，設計半導體設備資料上拋與 CIM Host 整合模擬系統。本專案為求職展示型 Side Project，展示「設備 → Host → Database → Dashboard / Notification」的完整資料流。
+結合封測廠工作經驗與企業系統開發經驗，設計半導體設備資料上拋與 CIM Host 整合模擬系統。本專案展示「設備 → Host → Database → Dashboard / Notification」的完整資料流。
 
 ## Architecture
 Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard (Streamlit) / Line Bot
