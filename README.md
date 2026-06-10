@@ -25,11 +25,11 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
     - **SECS 訊息模擬**：狀態改變時同步產生 **S6F11 Event Report** 訊息 Log。
 
 ### 3. 異常監控與警報 (Alarm Handling Phase)
-- **觸發條件**：當感測器數值異常（例如：溫度 > 85°C）。
+- **觸發條件**：設備上拋感測器數據時，CIM Host API 會比對 **Alarm Rule Engine** 中設定的動態規則（預設例如：溫度 > 85°C）。
 - **動作**：
-    - 立即產生 **S5F1 Alarm Report** 訊息。
+    - 由 API 自動建立對應的警報紀錄。
     - 在資料庫 `equipment_alarm_log` 中標註為 `ACTIVE` 狀態。
-- **目的**：模擬製造現場的異常即時回報機制。
+- **目的**：模擬製造現場的異常即時回報機制與主機端規則判斷。
 
 ### 4. 資料持久化與分析 (Persistence & Logic)
 - **CIM Host API**：負責接收所有 POST 請求，驗證資料格式後透過 SQLAlchemy 寫入資料庫。
@@ -42,6 +42,7 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 ## Features
 - **Equipment Simulator**: 模擬多台封測/半導體設備定期上拋 RUN/IDLE/DOWN/PM 狀態與感測資料。
 - **CIM Host API**: 接收設備狀態、事件、Alarm、Sensor Data 與 Remote Command。
+- **Alarm Rule Engine**: 提供 API 動態設定警報規則，當設備上拋資料時，由 CIM Host 主動判定是否觸發 Alarm。
 - **SECS/GEM-style Message**: 模擬常見訊息流程如 S6F11 Event Report, S5F1 Alarm Report, S2F41 Remote Command。
 - **Simulator Control Switch**: 支援從 Dashboard 遠端開啟/關閉模擬器上拋，便於展示並大幅降低雲端部署成本。
 - **Dashboard**: Streamlit 建立的設備狀態監控、Alarm 清單、Sensor 趨勢。
