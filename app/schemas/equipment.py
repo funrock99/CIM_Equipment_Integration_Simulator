@@ -64,3 +64,21 @@ class SecsMessageRequest(BaseModel):
     report: Optional[Dict[str, Any]] = None
     direction: Optional[str] = "EQP_TO_HOST"
     event_time: Optional[datetime] = None
+
+class AlarmRuleBase(BaseModel):
+    eqp_id: Optional[str] = None
+    sensor_name: str
+    condition: str
+    threshold_value: float
+    alarm_code: str
+    alarm_level: str
+    alarm_message: str
+
+class AlarmRuleCreate(AlarmRuleBase):
+    pass
+
+class AlarmRuleResponse(AlarmRuleBase):
+    id: int
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)

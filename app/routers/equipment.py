@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 import datetime
+import operator
 
 from app.database import get_db
 from app.models import equipment as models
@@ -111,6 +112,27 @@ def report_sensor(sensor_data: schemas.EquipmentSensorCreate, db: Session = Depe
         collected_at=sensor_data.collected_at or datetime.datetime.now()
     )
     db.add(log)
+    
+    # 檢查是否觸發 Alarm Rule
+    rules = db.query(models.AlarmRule).filter(models.AlarmRule.sensor_name == sensor_data.sensor_name).all()
+    for rule in rules:
+        if rule.eqp_id and rule.eqp_id != sensor_data.eqp_id:
+            continue
+            
+        ops = {'>': operator.gt, '<': operator.lt, '>=': operator.ge, '<=': operator.le, '==': operator.eq, '!=': operator.ne}
+        op_func = ops.get(rule.condition)
+        if op_func and op_func(float(sensor_data.sensor_value), float(rule.threshold_value)):
+            alarm_log = models.EquipmentAlarmLog(
+                eqp_id=sensor_data.eqp_id,
+                alarm_code=rule.alarm_code,
+                alarm_level=rule.alarm_level,
+                alarm_message=f"{rule.alarm_message} (Value: {sensor_data.sensor_value})",
+                alarm_status="ACTIVE",
+                occurred_at=datetime.datetime.now()
+            )
+            db.add(alarm_log)
+            # 此處可未來擴充：呼叫 Line Bot API 推播
+
     db.commit()
     return {"message": "Sensor data logged successfully"}
 
@@ -134,3 +156,33 @@ def send_remote_command(eqp_id: str, cmd_data: schemas.RemoteCommandCreate, db: 
 @router.get("/{eqp_id}/commands")
 def get_equipment_commands(eqp_id: str, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.RemoteCommandLog).filter(models.RemoteCommandLog.eqp_id == eqp_id).order_by(models.RemoteCommandLog.created_at.desc()).limit(limit).all()
+
+# ================= Alarm Rules =================
+@router.post("/rules", response_model=schemas.AlarmRuleResponse)
+def create_alarm_rule(rule_data: schemas.AlarmRuleCreate, db: Session = Depends(get_db)):
+    new_rule = models.AlarmRule(
+        eqp_id=rule_data.eqp_id,
+        sensor_name=rule_data.sensor_name,
+        condition=rule_data.condition,
+        threshold_value=rule_data.threshold_value,
+        alarm_code=rule_data.alarm_code,
+        alarm_level=rule_data.alarm_level,
+        alarm_message=rule_data.alarm_message
+    )
+    db.add(new_rule)
+    db.commit()
+    db.refresh(new_rule)
+    return new_rule
+
+@router.get("/rules", response_model=List[schemas.AlarmRuleResponse])
+def get_alarm_rules(db: Session = Depends(get_db)):
+    return db.query(models.AlarmRule).all()
+
+@router.delete("/rules/{rule_id}")
+def delete_alarm_rule(rule_id: int, db: Session = Depends(get_db)):
+    rule = db.query(models.AlarmRule).filter(models.AlarmRule.id == rule_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    db.delete(rule)
+    db.commit()
+    return {"message": "Rule deleted successfully"}

@@ -74,3 +74,15 @@ class SecsMessageLog(Base):
     direction = Column(String(20))
     payload = Column(JSON)
     created_at = Column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))
+
+class AlarmRule(Base):
+    __tablename__ = "alarm_rule"
+    id = Column(Integer, primary_key=True, index=True)
+    eqp_id = Column(String(50), nullable=True, index=True) # None means applies to all
+    sensor_name = Column(String(50), nullable=False)
+    condition = Column(String(10), nullable=False) # '>', '<', '==', '>=', '<='
+    threshold_value = Column(Numeric, nullable=False)
+    alarm_code = Column(String(50), nullable=False)
+    alarm_level = Column(String(20), nullable=False)
+    alarm_message = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=text('CURRENT_TIMESTAMP'))

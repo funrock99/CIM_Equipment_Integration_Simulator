@@ -23,6 +23,24 @@ def register_equipments():
         except Exception as e:
             print(f"Failed to register {eqp['eqp_id']}: {e}")
 
+def register_default_rules():
+    try:
+        res = requests.get(f"{API_BASE_URL}/equipment/rules")
+        if res.status_code == 200 and len(res.json()) == 0:
+            rule = {
+                "eqp_id": None,
+                "sensor_name": "Temperature",
+                "condition": ">",
+                "threshold_value": 85.0,
+                "alarm_code": "ALM_HIGH_TEMP",
+                "alarm_level": "WARNING",
+                "alarm_message": "Temperature exceeded threshold"
+            }
+            requests.post(f"{API_BASE_URL}/equipment/rules", json=rule)
+            print("Registered default alarm rule for Temperature > 85.0")
+    except Exception as e:
+        print(f"Failed to register default rule: {e}")
+
 def simulate_equipment(eqp):
     eqp_id = eqp["eqp_id"]
     current_status = "IDLE"
@@ -79,20 +97,7 @@ def simulate_equipment(eqp):
                 "eqp_id": eqp_id, "sensor_name": "Pressure", "sensor_value": pressure, "unit": "atm"
             })
             
-            # Simulate Alarms
-            if temp > 85.0:
-                alarm_payload = {
-                    "eqp_id": eqp_id, "alarm_code": "ALM_HIGH_TEMP", "alarm_level": "WARNING",
-                    "alarm_message": "Temperature exceeded 85C", "alarm_status": "ACTIVE"
-                }
-                requests.post(f"{API_BASE_URL}/equipment/alarm", json=alarm_payload)
-                
-                # S5F1 Alarm Report
-                requests.post(f"{API_BASE_URL}/secs/message", json={
-                    "stream": 5, "function": 1, "message_name": "S5F1_AlarmReport",
-                    "equipment_id": eqp_id, "event_id": "ALM_HIGH_TEMP",
-                    "report": {"level": "WARNING", "message": "Temperature exceeded 85C"}
-                })
+            # Alarm 邏輯已移至 CIM Host API 端 (Alarm Rule Engine)
                 
         except Exception as e:
             print(f"Error simulating {eqp_id}: {e}")
@@ -103,6 +108,7 @@ if __name__ == "__main__":
     print("Waiting for API to start...")
     time.sleep(5)
     register_equipments()
+    register_default_rules()
     
     threads = []
     for eqp in EQUIPMENTS:
