@@ -58,6 +58,10 @@ st.sidebar.subheader("Simulator System")
 current_sim_status = get_sim_status()
 new_sim_status = st.sidebar.toggle("Enable Data Reporting", value=current_sim_status)
 
+st.sidebar.divider()
+st.sidebar.subheader("Alarm Settings")
+st.sidebar.markdown("👉 [設定 Alarm Rules (API Docs)](http://localhost:8000/docs)")
+
 if new_sim_status != current_sim_status:
     set_sim_status(new_sim_status)
     st.sidebar.success(f"Simulator {'Started' if new_sim_status else 'Paused'}")
