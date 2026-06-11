@@ -7,6 +7,8 @@ import operator
 from app.database import get_db
 from app.models import equipment as models
 from app.schemas import equipment as schemas
+from app.routers.linebot import line_bot_api
+from linebot.models import TextSendMessage
 
 router = APIRouter()
 
@@ -97,6 +99,14 @@ def report_alarm(alarm_data: schemas.EquipmentAlarmCreate, db: Session = Depends
     )
     db.add(log)
     db.commit()
+    
+    if alarm_data.alarm_status == "ACTIVE":
+        try:
+            msg = f"⚠️ [主動告警]\n設備: {alarm_data.eqp_id}\n代碼: {alarm_data.alarm_code}\n等級: {alarm_data.alarm_level}\n訊息: {alarm_data.alarm_message}"
+            line_bot_api.broadcast(TextSendMessage(text=msg))
+        except Exception as e:
+            print(f"Line Bot broadcast failed: {e}")
+
     return {"message": "Alarm logged successfully"}
 
 @router.get("/{eqp_id}/alarms")
@@ -132,7 +142,12 @@ def report_sensor(sensor_data: schemas.EquipmentSensorCreate, db: Session = Depe
                 occurred_at=datetime.datetime.now()
             )
             db.add(alarm_log)
-            # 此處可未來擴充：呼叫 Line Bot API 推播
+            
+            try:
+                msg = f"🚨 [規則告警]\n設備: {sensor_data.eqp_id}\n代碼: {rule.alarm_code}\n等級: {rule.alarm_level}\n訊息: {rule.alarm_message}\n觸發數值: {sensor_data.sensor_value}"
+                line_bot_api.broadcast(TextSendMessage(text=msg))
+            except Exception as e:
+                print(f"Line Bot broadcast failed: {e}")
 
     db.commit()
     return {"message": "Sensor data logged successfully"}

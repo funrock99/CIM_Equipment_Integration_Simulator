@@ -29,6 +29,7 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 - **動作**：
     - 由 API 自動建立對應的警報紀錄。
     - 在資料庫 `equipment_alarm_log` 中標註為 `ACTIVE` 狀態。
+    - **Line 主動告警**：同步觸發 Line Bot 推播 API，將警報資訊即時推播給系統管理者。
 - **目的**：模擬製造現場的異常即時回報機制與主機端規則判斷。
 
 ### 4. 資料持久化與分析 (Persistence & Logic)
@@ -46,7 +47,7 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 - **SECS/GEM-style Message**: 模擬常見訊息流程如 S6F11 Event Report, S5F1 Alarm Report, S2F41 Remote Command。
 - **Simulator Control Switch**: 支援從 Dashboard 遠端開啟/關閉模擬器上拋，便於展示並大幅降低雲端部署成本。
 - **Dashboard**: Streamlit 建立的設備狀態監控、Alarm 清單、Sensor 趨勢。
-- **Line Bot**: 即時查詢設備狀態、異常報警與最新溫度感測數據。
+- **Line Bot**: 支援即時查詢設備狀態與最新溫度感測數據，並具備 **Line 主動告警** 功能（當設備主動上報或觸發異常規則時，自動推播通知）。
 
 ## Tech Stack
 - Python 3.10
