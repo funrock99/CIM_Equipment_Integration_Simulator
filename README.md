@@ -1,12 +1,12 @@
-# CIM Equipment Integration Simulator
+# CIM Equipment Integration Simulator 2.0
 
-半導體設備 CIM 整合模擬系統
+半導體設備 CIM 整合模擬系統 (Modern Web App 升級版)
 
 ## Project Overview
-結合封測廠工作經驗與企業系統開發經驗，設計半導體設備資料上拋與 CIM Host 整合模擬系統。本專案展示「設備 → Host → Database → Dashboard / Notification」的完整資料流。
+結合封測廠工作經驗與企業系統開發經驗，設計半導體設備資料上拋與 CIM Host 整合模擬系統。本專案展示「設備 → Host → Database → Dashboard / Notification」的完整資料流，並已升級為具備全端現代化架構的 Web App。
 
 ## Architecture
-Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard (Streamlit) / Line Bot
+Equipment Simulator -> CIM Host API (FastAPI + WebSockets) -> PostgreSQL/SQLite -> React Dashboard (Vite) / Line Bot
 
 ## System Workflow (系統完整流程)
 
@@ -14,112 +14,75 @@ Equipment Simulator -> CIM Host API (FastAPI) -> PostgreSQL/SQLite -> Dashboard 
 
 ### 1. 設備初始化與註冊 (Registration Phase)
 - **觸發時機**：模擬器啟動時。
-- **動作**：設備模擬器將預設的設備清單（如 Etcher, CVD 等）透過 API 註冊至資料庫。
-- **目的**：建立基礎設備主檔，確保後續上拋資料能正確關聯。
+- **動作**：10 台設備的模擬器執行緒啟動，並自動向 API 註冊至資料庫，同時同步最後已知的狀態 (State Synchronization) 避免重啟狀態遺失。
 
-### 2. 週期性資料上拋 (Data Collection Phase)
+### 2. 週期性資料上拋與防呆生產 (Data Collection & Production Phase)
 - **執行頻率**：每 **5 秒** 循環一次。
-- **資料內容**：
-    - **感測器數據 (Sensor Data)**：模擬產生溫度 (Temperature) 與壓力 (Pressure) 數值並即時寫入資料庫。
-    - **設備狀態 (Status Change)**：每次循環有 20% 機率改變狀態 (RUN/IDLE/DOWN/PM)。
-    - **SECS 訊息模擬**：狀態改變時同步產生 **S6F11 Event Report** 訊息 Log。
+- **Lot 生產與防呆 (Recipe Mismatch)**：閒置 (`IDLE`) 的設備有小機率進貨並轉為 `RUN`。在此過程中有 10% 機率設備會帶錯配方，此時 Host 會觸發防呆阻擋，拋出 400 錯誤並發送 Line 告警。
+- **感測器數據 (Sensor Data)**：模擬產生溫度與壓力數值並即時寫入資料庫。
+- **異常發生 (Hardware Anomaly)**：運轉中設備有極小機率突發異常轉為 `DOWN` 或 `PM`。
 
-### 3. 異常監控與警報 (Alarm Handling Phase)
-- **觸發條件**：設備上拋感測器數據時，CIM Host API 會比對 **Alarm Rule Engine** 中設定的動態規則（預設例如：溫度 > 85°C）。
-- **動作**：
-    - 由 API 自動建立對應的警報紀錄。
-    - 在資料庫 `equipment_alarm_log` 中標註為 `ACTIVE` 狀態。
-    - **Line 主動告警**：同步觸發 Line Bot 推播 API，將警報資訊即時推播給系統管理者。
-- **目的**：模擬製造現場的異常即時回報機制與主機端規則判斷。
+### 3. Remote Command 交握 (Asynchronous Handshake)
+- **遠端控制**：使用者從 Dashboard 對機台下發 `START`, `STOP`, `CHANGE_RECIPE`，API 將指令狀態設為 `PENDING`。
+- **非同步處理**：對應的設備模擬器在輪詢中發現指令後，處理狀態轉換並回覆 `ACK/NACK`。
+- **Simulator Power (模擬斷線互斥)**：若從儀表板將機台 Simulator Power 切換為 `Paused`，機台將不再處理指令，完美模擬設備斷線/關機時指令卡在 `PENDING` 的真實場景。
 
-### 4. 資料持久化與分析 (Persistence & Logic)
-- **CIM Host API**：負責接收所有 POST 請求，驗證資料格式後透過 SQLAlchemy 寫入資料庫。
-- **資料庫**：儲存所有歷史軌跡，包含狀態歷程、異常紀錄與 SECS 訊息原始 Payload。
+### 4. 異常監控與警報 (Alarm Handling Phase)
+- **Alarm Rule Engine**：設備上拋感測器數據時，CIM Host API 會比對動態設定的規則庫。
+- 若數值超標，由 API 自動建立警報，並透過 **Line Bot 主動告警**，將警報推播給系統管理者。
 
-### 5. 即時監控與互動 (Presentation & Interaction)
-- **Dashboard**：定時向 API 抓取最新數據，以視覺化圖表展示設備稼動率與感測器趨勢。
-- **Line Bot**：使用者可透過手機輸入指令查詢特定設備的最新狀態或異常清單。
+### 5. 零延遲現代化儀表板 (Modern React Dashboard)
+- 拋棄傳統的輪詢閃爍介面，採用 **React 18 + Vite** 打造高質感玻璃擬物化 (Glassmorphism) 深色儀表板。
+- 透過 **FastAPI WebSockets**，當機台狀態改變或指令交握完成時，後端主動推播 (Push) JSON 至前端，實現毫秒級的局部資料更新。
 
 ## Features
-- **Equipment Simulator**: 模擬多台封測/半導體設備定期上拋 RUN/IDLE/DOWN/PM 狀態與感測資料。
-- **CIM Host API**: 接收設備狀態、事件、Alarm、Sensor Data 與 Remote Command。
-- **Alarm Rule Engine**: 提供獨立的系統級 API (`/api/rules`) 以動態設定警報規則。當設備上拋資料時，CIM Host 會主動判定是否觸發異常。系統同時提供 **Dashboard 圖形化專屬面板**，讓使用者輕鬆新增與刪除警報邏輯，無須撰寫程式碼。
-- **SECS/GEM-style Message**: 模擬常見訊息流程如 S6F11 Event Report, S5F1 Alarm Report, S2F41 Remote Command。
-- **Simulator Control Switch**: 支援從 Dashboard 遠端開啟/關閉模擬器上拋，便於展示並大幅降低雲端部署成本。
-- **Dashboard**: Streamlit 建立的設備狀態監控、Alarm 清單、Sensor 趨勢。
-- **Line Bot**: 支援即時查詢設備狀態與最新溫度感測數據，並具備 **Line 主動告警** 功能（當設備主動上報或觸發異常規則時，自動推播通知）。
+- **多設備模擬**: 支援 10 台設備 (ETCH, CVD, WET, PVD) 同步併發模擬。
+- **CIM Host API**: 接收設備狀態、事件、Alarm、Sensor Data，並處理 Remote Command 交握。
+- **Alarm Rule Engine**: 動態設定警報規則，觸發時主動建立異常。
+- **防呆機制**: Recipe Mismatch 攔截邏輯與通知。
+- **React + WebSocket 監控**: 現代化前端，無閃爍即時狀態推播。
+- **Line Bot**: 支援對話互動查詢，並具備防呆與規則異常的主動推播功能。
 
 ## Tech Stack
 - Python 3.10
-- FastAPI
-- PostgreSQL / SQLAlchemy
-- Streamlit
-- Docker Compose
+- FastAPI + WebSockets
+- React 18 + Vite (Vanilla CSS)
+- PostgreSQL / SQLite (支援本地自動 Fallback)
+- LINE Messaging API
 
 ## Quick Start
 
-### 啟動步驟
+### 啟動步驟 (Windows 一鍵啟動推薦)
 
-本專案提供 **Docker** 與 **本機手動** 兩種啟動方式供您選擇。
-
-#### 方式一：使用 Docker Compose 啟動 (推薦)
-若您已安裝 Docker 與 Docker Compose，可直接在專案根目錄執行以下指令啟動資料庫與 API：
-```bash
-docker-compose up -d --build
-```
-接著，您只需在本地環境分別啟動設備模擬器與監控面板（請參考下方 **方式二** 中的步驟 2 與步驟 3）。
-
-#### 方式二：純本機手動啟動
-如果您不使用 Docker，請開啟三個獨立的終端機視窗，分別執行以下指令來啟動系統的三個核心組件：
-
-1. **啟動 CIM Host API (FastAPI)**
-   ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
+1. 在專案根目錄下，複製環境變數設定檔：
+   ```cmd
+   copy .env.example .env
    ```
+2. 直接雙擊執行 **`start.bat`** 批次檔！
+   - 此腳本會自動為您啟動 FastAPI 後台。
+   - 自動啟動 Python 設備模擬器。
+   - 自動啟動 React + Vite 開發伺服器，並**自動開啟瀏覽器**跳轉至 Dashboard 畫面。
 
-2. **啟動 Equipment Simulator (設備模擬器)**
-   （請等待 API 啟動完成後再執行）
-   ```bash
-   python simulator/equipment_simulator.py
-   ```
+#### 手動啟動 (Linux/macOS)
+若不使用 `start.bat`，您可開啟三個終端機：
+1. **啟動 API**: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+2. **啟動 模擬器**: `python simulator/equipment_simulator.py`
+3. **啟動 React 前端**: `cd dashboard-react && npm run dev`
 
-3. **啟動 Dashboard (監控面板)**
-   ```bash
-   streamlit run dashboard/streamlit_app.py
-   ```
-
-#### 存取系統
-待服務啟動完成後，可透過瀏覽器前往：
-- API 文件 (Swagger): http://localhost:8000/docs
-- 監控儀表板 (Dashboard): http://localhost:8501
-
-## Environment Setup (環境變數設定)
-
-在啟動專案前，請先建立環境變數設定檔：
-
-1. 複製環境變數範例檔，於專案根目錄建立 `.env` 檔案：
-   - Windows (PowerShell / 命令提示字元):
-     ```cmd
-     copy .env.example .env
-     ```
-   - Linux / macOS / Git Bash:
-     ```bash
-     cp .env.example .env
-     ```
-2. （選用）開啟 `.env`，可根據您的環境調整資料庫連線等設定（預設為 SQLite 可直接啟動）。
+### 存取系統
+- **現代化儀表板 (React)**: http://localhost:5173
+- **API 文件 (Swagger)**: http://localhost:8000/docs
+- **舊版靜態監控 (Streamlit)**: http://localhost:8501 (需手動執行 `streamlit run dashboard/streamlit_app.py`)
 
 ## Line Bot Setup (Webhook 整合)
 要啟用 Line Bot 功能，請依照以下步驟設定：
 
 1. 前往 **LINE Developers Console** 建立 Messaging API，取得 `Channel Secret` 與 `Channel Access Token`。
-2. 開啟剛剛建立的 `.env` 設定檔案，填入您的 Line Bot 密鑰：
+2. 開啟 `.env` 設定檔案，填入密鑰：
    ```env
    LINE_CHANNEL_ACCESS_TOKEN=您的Token
    LINE_CHANNEL_SECRET=您的Secret
    ```
-3. 若在本機開發，請使用 `ngrok` 取得公開 HTTPS 網址：
-   ```bash
-   ngrok http 8000
-   ```
+3. 若在本機開發，請使用 `ngrok` 取得公開 HTTPS 網址：`ngrok http 8000`
 4. 於 LINE Developers 後台將 Webhook URL 設定為：`https://<您的_ngrok_網址>/api/linebot/callback`
-5. 啟用 Webhook 功能後即可向 Bot 傳送指令（例如：「查設備」、「查異常」、「查溫度 EQP-ETCH-001」）進行互動查詢。
+5. 啟用 Webhook 後即可透過 Line 查詢設備狀態或接收防呆警報。

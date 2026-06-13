@@ -16,6 +16,52 @@ def get_equipments():
         pass
     return []
 
+def toggle_eqp_sim(eqp_id, start=True):
+    action = "start" if start else "stop"
+    try:
+        requests.post(f"{API_URL}/equipment/{eqp_id}/{action}")
+    except:
+        pass
+
+def clear_alarm(alarm_id):
+    try:
+        requests.post(f"{API_URL}/equipment/alarms/{alarm_id}/clear", json={"clear_message": "Cleared from Dashboard"})
+    except:
+        pass
+
+def send_remote_command(eqp_id, cmd_name, params=None):
+    try:
+        requests.post(f"{API_URL}/equipment/{eqp_id}/remote-command", json={"command_name": cmd_name, "parameters": params or {}})
+    except:
+        pass
+
+def get_commands(eqp_id):
+    try:
+        res = requests.get(f"{API_URL}/equipment/{eqp_id}/commands?limit=10")
+        if res.status_code == 200:
+            return res.json()
+    except:
+        pass
+    return []
+
+@st.fragment
+def render_equipment_table():
+    eqps = get_equipments()
+    if eqps:
+        df_eqp = pd.DataFrame(eqps)
+        st.dataframe(df_eqp[['eqp_id', 'eqp_name', 'eqp_type', 'current_status', 'enabled', 'current_recipe_id', 'current_lot_id', 'updated_at']], use_container_width=True)
+        return df_eqp
+    return None
+
+@st.fragment
+def render_command_history(cmd_eqp):
+    cmd_history = get_commands(cmd_eqp)
+    if cmd_history:
+        df_cmd = pd.DataFrame(cmd_history)
+        st.markdown(f"**Recent Commands for {cmd_eqp}**")
+        st.dataframe(df_cmd[['id', 'eqp_id', 'command_name', 'parameters', 'status', 'created_at', 'updated_at']], use_container_width=True)
+
+
 def get_alarms(eqp_id):
     try:
         res = requests.get(f"{API_URL}/equipment/{eqp_id}/alarms?limit=50")
@@ -92,13 +138,45 @@ equipments = get_equipments()
 
 if page == "Overview":
     st.header("Equipment Overview")
+            
     if not equipments:
         st.warning("No equipment data available.")
     else:
-        df_eqp = pd.DataFrame(equipments)
-        st.dataframe(df_eqp[['eqp_id', 'eqp_name', 'eqp_type', 'current_status', 'updated_at']], use_container_width=True)
+        df_eqp_latest = render_equipment_table()
+        
+        st.subheader("Equipment Control")
+        col1, col2 = st.columns(2)
+        with col1:
+            sel_eqp = st.selectbox("Select Equipment to Control", [e["eqp_id"] for e in equipments])
+        with col2:
+            st.write("Actions:")
+            if st.button("Start Simulation"):
+                toggle_eqp_sim(sel_eqp, start=True)
+                st.rerun()
+            if st.button("Stop Simulation"):
+                toggle_eqp_sim(sel_eqp, start=False)
+                st.rerun()
+        
+        st.subheader("Remote Command")
+        cmd_col1, cmd_col2, cmd_col3 = st.columns(3)
+        with cmd_col1:
+            cmd_eqp = st.selectbox("Select Equipment for Command", [e["eqp_id"] for e in equipments])
+        with cmd_col2:
+            cmd_name = st.selectbox("Command", ["START", "STOP", "CHANGE_RECIPE"])
+            cmd_recipe = ""
+            if cmd_name == "CHANGE_RECIPE":
+                cmd_recipe = st.text_input("New Recipe ID", "RCP-NEW-001")
+        with cmd_col3:
+            st.write("Action:")
+            if st.button("Send Command"):
+                params = {"recipe_id": cmd_recipe} if cmd_name == "CHANGE_RECIPE" else {}
+                send_remote_command(cmd_eqp, cmd_name, params)
+                st.success("Command Sent!")
+                
+        render_command_history(cmd_eqp)
         
         st.subheader("Status Distribution")
+        df_eqp = pd.DataFrame(equipments)
         status_counts = df_eqp['current_status'].value_counts()
         st.bar_chart(status_counts)
 
@@ -111,7 +189,16 @@ elif page == "Alarms":
         alarms = get_alarms(eqp_id)
         if alarms:
             df_alarms = pd.DataFrame(alarms)
-            st.dataframe(df_alarms[['alarm_code', 'alarm_level', 'alarm_message', 'alarm_status', 'occurred_at']], use_container_width=True)
+            st.dataframe(df_alarms[['id', 'alarm_code', 'alarm_level', 'alarm_message', 'alarm_status', 'occurred_at', 'cleared_at']], use_container_width=True)
+            
+            active_alarms = df_alarms[df_alarms['alarm_status'] == 'ACTIVE']
+            if not active_alarms.empty:
+                st.subheader("Clear Active Alarms")
+                alarm_to_clear = st.selectbox("Select Alarm ID to clear", active_alarms['id'].tolist())
+                if st.button("Clear Alarm"):
+                    clear_alarm(alarm_to_clear)
+                    st.success(f"Alarm {alarm_to_clear} cleared!")
+                    st.rerun()
         else:
             st.info("No alarms found for this equipment.")
 

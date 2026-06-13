@@ -1,0 +1,33 @@
+.power-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.power-on {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.power-off {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.mini-power-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+.mini-power-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

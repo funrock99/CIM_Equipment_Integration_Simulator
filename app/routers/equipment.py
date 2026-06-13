@@ -9,6 +9,7 @@ from app.models import equipment as models
 from app.schemas import equipment as schemas
 from app.routers.linebot import line_bot_api
 from linebot.models import TextSendMessage
+from app.ws_manager import manager
 
 router = APIRouter()
 
@@ -60,6 +61,7 @@ def report_status(status_data: schemas.EquipmentStatusCreate, db: Session = Depe
     )
     db.add(log)
     db.commit()
+    manager.broadcast_sync({"type": "STATUS_UPDATE", "eqp_id": status_data.eqp_id})
     return {"message": "Status updated successfully"}
 
 @router.get("/{eqp_id}/status")
@@ -157,7 +159,11 @@ def get_equipment_sensors(eqp_id: str, limit: int = 100, db: Session = Depends(g
     return db.query(models.EquipmentSensorData).filter(models.EquipmentSensorData.eqp_id == eqp_id).order_by(models.EquipmentSensorData.collected_at.desc()).limit(limit).all()
 
 @router.post("/{eqp_id}/remote-command")
-def send_remote_command(eqp_id: str, cmd_data: schemas.RemoteCommandCreate, db: Session = Depends(get_db)):
+def queue_remote_command(eqp_id: str, cmd_data: schemas.RemoteCommandCreate, db: Session = Depends(get_db)):
+    db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()
+    if not db_eqp:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    
     log = models.RemoteCommandLog(
         eqp_id=eqp_id,
         command_name=cmd_data.command_name,
@@ -167,10 +173,122 @@ def send_remote_command(eqp_id: str, cmd_data: schemas.RemoteCommandCreate, db: 
     db.add(log)
     db.commit()
     db.refresh(log)
+    
+    manager.broadcast_sync({"type": "COMMAND_UPDATE", "eqp_id": eqp_id})
     return {"message": "Command queued", "command_id": log.id, "status": "PENDING"}
 
 @router.get("/{eqp_id}/commands")
 def get_equipment_commands(eqp_id: str, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(models.RemoteCommandLog).filter(models.RemoteCommandLog.eqp_id == eqp_id).order_by(models.RemoteCommandLog.created_at.desc()).limit(limit).all()
 
+@router.get("/{eqp_id}/commands/pending")
+def get_pending_commands(eqp_id: str, db: Session = Depends(get_db)):
+    return db.query(models.RemoteCommandLog).filter(models.RemoteCommandLog.eqp_id == eqp_id, models.RemoteCommandLog.status == "PENDING").all()
 
+@router.post("/commands/{cmd_id}/reply")
+def reply_command(cmd_id: int, reply_data: schemas.RemoteCommandReply, db: Session = Depends(get_db)):
+    cmd = db.query(models.RemoteCommandLog).filter(models.RemoteCommandLog.id == cmd_id).first()
+    if not cmd:
+        raise HTTPException(status_code=404, detail="Command not found")
+    
+    cmd.status = reply_data.status
+    cmd.updated_at = datetime.datetime.now()
+    
+    # 同步更新 Host 端的設備主檔狀態
+    if reply_data.status == "ACK":
+        db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == cmd.eqp_id).first()
+        if db_eqp:
+            if cmd.command_name == "CHANGE_RECIPE" and cmd.parameters and "recipe_id" in cmd.parameters:
+                db_eqp.current_recipe_id = cmd.parameters["recipe_id"]
+            elif cmd.command_name == "START":
+                db_eqp.current_status = "RUN"
+            elif cmd.command_name == "STOP":
+                db_eqp.current_status = "IDLE"
+                
+    db.commit()
+    manager.broadcast_sync({"type": "COMMAND_REPLY", "eqp_id": cmd.eqp_id})
+    return {"message": "Command replied successfully"}
+
+@router.post("/{eqp_id}/start")
+def start_equipment(eqp_id: str, db: Session = Depends(get_db)):
+    db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()
+    if not db_eqp:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    db_eqp.enabled = True
+    db.commit()
+    return {"message": f"Equipment {eqp_id} simulation started"}
+
+@router.post("/{eqp_id}/stop")
+def stop_equipment(eqp_id: str, db: Session = Depends(get_db)):
+    db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()
+    if not db_eqp:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    db_eqp.enabled = False
+    db.commit()
+    return {"message": f"Equipment {eqp_id} simulation stopped"}
+
+@router.post("/alarms/{alarm_id}/clear")
+def clear_alarm(alarm_id: int, clear_data: schemas.AlarmClearRequest, db: Session = Depends(get_db)):
+    db_alarm = db.query(models.EquipmentAlarmLog).filter(models.EquipmentAlarmLog.id == alarm_id).first()
+    if not db_alarm:
+        raise HTTPException(status_code=404, detail="Alarm not found")
+    
+    db_alarm.alarm_status = "CLEARED"
+    db_alarm.cleared_at = datetime.datetime.now()
+    if clear_data.clear_message:
+        db_alarm.alarm_message += f" [Cleared: {clear_data.clear_message}]"
+    db.commit()
+    return {"message": "Alarm cleared successfully"}
+
+@router.post("/{eqp_id}/recipes/assign")
+def assign_recipe(eqp_id: str, assign_data: schemas.RecipeAssignRequest, db: Session = Depends(get_db)):
+    db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()
+    if not db_eqp:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    
+    db_eqp.current_recipe_id = assign_data.recipe_id
+    db.commit()
+    return {"message": f"Recipe {assign_data.recipe_id} assigned to {eqp_id}"}
+
+@router.post("/{eqp_id}/lots/{lot_id}/start")
+def start_lot(lot_id: str, eqp_id: str, lot_data: schemas.LotStartRequest, db: Session = Depends(get_db)):
+    db_eqp = db.query(models.Equipment).filter(models.Equipment.eqp_id == eqp_id).first()
+    if not db_eqp:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    
+    # Check for Recipe Mismatch
+    if lot_data.recipe_id and db_eqp.current_recipe_id and lot_data.recipe_id != db_eqp.current_recipe_id:
+        alarm_log = models.EquipmentAlarmLog(
+            eqp_id=eqp_id,
+            alarm_code="RECIPE_MISMATCH",
+            alarm_level="CRITICAL",
+            alarm_message=f"Recipe mismatch: expected {db_eqp.current_recipe_id}, got {lot_data.recipe_id}",
+            alarm_status="ACTIVE",
+            occurred_at=datetime.datetime.now()
+        )
+        db.add(alarm_log)
+        db.commit()
+        try:
+            msg = f"🚨 [防呆告警 - Recipe Mismatch]\n設備: {eqp_id}\nLot: {lot_id}\nHost配方: {db_eqp.current_recipe_id}\n設備回報配方: {lot_data.recipe_id}\n動作: 阻擋生產"
+            line_bot_api.broadcast(TextSendMessage(text=msg))
+        except Exception as e:
+            pass
+        raise HTTPException(status_code=400, detail="Recipe Mismatch! Production blocked.")
+    
+    db_eqp.current_lot_id = lot_id
+    db_eqp.current_status = "RUN"
+    db.commit()
+    
+    log = models.LotHistory(
+        lot_id=lot_id,
+        product_code=lot_data.product_code,
+        route=lot_data.route,
+        step_id=lot_data.step_id,
+        quantity=lot_data.quantity,
+        eqp_id=eqp_id,
+        status="IN_PROGRESS",
+        start_time=datetime.datetime.now()
+    )
+    db.add(log)
+    db.commit()
+    return {"message": f"Lot {lot_id} started on {eqp_id}"}

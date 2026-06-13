@@ -7,6 +7,8 @@ class EquipmentBase(BaseModel):
     eqp_name: Optional[str] = None
     eqp_type: Optional[str] = None
     location: Optional[str] = None
+    enabled: Optional[bool] = True
+
 
 class EquipmentCreate(EquipmentBase):
     pass
@@ -55,6 +57,10 @@ class RemoteCommandCreate(BaseModel):
     command_name: str
     parameters: Optional[Dict[str, Any]] = None
 
+class RemoteCommandReply(BaseModel):
+    status: str # e.g. ACK, NACK, FAILED
+    response_message: Optional[str] = None
+
 class SecsMessageRequest(BaseModel):
     stream: int
     function: int
@@ -82,3 +88,18 @@ class AlarmRuleResponse(AlarmRuleBase):
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
+
+class RecipeAssignRequest(BaseModel):
+    recipe_id: str
+    version: Optional[str] = None
+
+class LotStartRequest(BaseModel):
+    lot_id: str
+    product_code: Optional[str] = None
+    route: Optional[str] = None
+    step_id: Optional[str] = None
+    quantity: Optional[int] = None
+    recipe_id: Optional[str] = None
+
+class AlarmClearRequest(BaseModel):
+    clear_message: Optional[str] = None
