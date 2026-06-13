@@ -127,7 +127,7 @@ def simulate_equipment(eqp):
                     "status": new_status,
                     "previous_status": current_status,
                     "reason": "Lot completed",
-                    "event_time": datetime.datetime.now().isoformat()
+                    "event_time": datetime.datetime.utcnow().isoformat()
                 }
                 requests.post(f"{API_BASE_URL}/equipment/status", json=status_payload)
                 current_status = new_status
@@ -140,7 +140,7 @@ def simulate_equipment(eqp):
                     "status": new_status,
                     "previous_status": current_status,
                     "reason": "Simulated hardware anomaly",
-                    "event_time": datetime.datetime.now().isoformat()
+                    "event_time": datetime.datetime.utcnow().isoformat()
                 }
                 requests.post(f"{API_BASE_URL}/equipment/status", json=status_payload)
                 current_status = new_status

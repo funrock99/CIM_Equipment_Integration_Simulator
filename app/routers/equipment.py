@@ -50,14 +50,14 @@ def report_status(status_data: schemas.EquipmentStatusCreate, db: Session = Depe
         raise HTTPException(status_code=404, detail="Equipment not found")
     
     db_eqp.current_status = status_data.status
-    db_eqp.updated_at = datetime.datetime.now()
+    db_eqp.updated_at = datetime.datetime.utcnow()
     
     log = models.EquipmentStatusLog(
         eqp_id=status_data.eqp_id,
         status=status_data.status,
         previous_status=status_data.previous_status,
         reason=status_data.reason,
-        event_time=status_data.event_time or datetime.datetime.now()
+        event_time=status_data.event_time or datetime.datetime.utcnow()
     )
     db.add(log)
     db.commit()
@@ -78,7 +78,7 @@ def report_event(event_data: schemas.EquipmentEventCreate, db: Session = Depends
         event_id=event_data.event_id,
         event_name=event_data.event_name,
         payload=event_data.payload,
-        event_time=event_data.event_time or datetime.datetime.now()
+        event_time=event_data.event_time or datetime.datetime.utcnow()
     )
     db.add(log)
     db.commit()
@@ -96,7 +96,7 @@ def report_alarm(alarm_data: schemas.EquipmentAlarmCreate, db: Session = Depends
         alarm_level=alarm_data.alarm_level,
         alarm_message=alarm_data.alarm_message,
         alarm_status=alarm_data.alarm_status,
-        occurred_at=alarm_data.occurred_at or datetime.datetime.now(),
+        occurred_at=alarm_data.occurred_at or datetime.datetime.utcnow(),
         cleared_at=alarm_data.cleared_at
     )
     db.add(log)
@@ -124,7 +124,7 @@ def report_sensor(sensor_data: schemas.EquipmentSensorCreate, db: Session = Depe
         sensor_name=sensor_data.sensor_name,
         sensor_value=sensor_data.sensor_value,
         unit=sensor_data.unit,
-        collected_at=sensor_data.collected_at or datetime.datetime.now()
+        collected_at=sensor_data.collected_at or datetime.datetime.utcnow()
     )
     db.add(log)
     
@@ -143,7 +143,7 @@ def report_sensor(sensor_data: schemas.EquipmentSensorCreate, db: Session = Depe
                 alarm_level=rule.alarm_level,
                 alarm_message=f"{rule.alarm_message} (Value: {sensor_data.sensor_value})",
                 alarm_status="ACTIVE",
-                occurred_at=datetime.datetime.now()
+                occurred_at=datetime.datetime.utcnow()
             )
             db.add(alarm_log)
             
@@ -195,7 +195,7 @@ def reply_command(cmd_id: int, reply_data: schemas.RemoteCommandReply, db: Sessi
         raise HTTPException(status_code=404, detail="Command not found")
     
     cmd.status = reply_data.status
-    cmd.updated_at = datetime.datetime.now()
+    cmd.updated_at = datetime.datetime.utcnow()
     
     # 同步更新 Host 端的設備主檔狀態
     if reply_data.status == "ACK":
@@ -237,7 +237,7 @@ def clear_alarm(alarm_id: int, clear_data: schemas.AlarmClearRequest, db: Sessio
         raise HTTPException(status_code=404, detail="Alarm not found")
     
     db_alarm.alarm_status = "CLEARED"
-    db_alarm.cleared_at = datetime.datetime.now()
+    db_alarm.cleared_at = datetime.datetime.utcnow()
     if clear_data.clear_message:
         db_alarm.alarm_message += f" [Cleared: {clear_data.clear_message}]"
     db.commit()
@@ -267,7 +267,7 @@ def start_lot(lot_id: str, eqp_id: str, lot_data: schemas.LotStartRequest, db: S
             alarm_level="CRITICAL",
             alarm_message=f"Recipe mismatch: expected {db_eqp.current_recipe_id}, got {lot_data.recipe_id}",
             alarm_status="ACTIVE",
-            occurred_at=datetime.datetime.now()
+            occurred_at=datetime.datetime.utcnow()
         )
         db.add(alarm_log)
         db.commit()
@@ -290,7 +290,7 @@ def start_lot(lot_id: str, eqp_id: str, lot_data: schemas.LotStartRequest, db: S
         quantity=lot_data.quantity,
         eqp_id=eqp_id,
         status="IN_PROGRESS",
-        start_time=datetime.datetime.now()
+        start_time=datetime.datetime.utcnow()
     )
     db.add(log)
     db.commit()

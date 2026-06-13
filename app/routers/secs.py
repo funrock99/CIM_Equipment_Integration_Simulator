@@ -21,7 +21,7 @@ def receive_secs_message(msg_data: schemas.SecsMessageRequest, db: Session = Dep
         message_name=msg_data.message_name,
         direction=msg_data.direction,
         payload=payload,
-        created_at=msg_data.event_time or datetime.datetime.now()
+        created_at=msg_data.event_time or datetime.datetime.utcnow()
     )
     db.add(log)
     db.commit()
