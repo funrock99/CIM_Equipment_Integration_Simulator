@@ -52,27 +52,30 @@ Equipment Simulator -> CIM Host API (FastAPI + WebSockets) -> PostgreSQL/SQLite 
 
 ## Quick Start
 
-### 啟動步驟 (Windows 一鍵啟動推薦)
+### 啟動步驟
 
-1. 在專案根目錄下，複製環境變數設定檔：
-   ```cmd
-   copy .env.example .env
+在啟動專案前，請開啟三個終端機 (Terminal) 分別啟動下列三個核心組件：
+
+1. **啟動 CIM Host API (FastAPI 後台)**
+   ```bash
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
-2. 直接雙擊執行 **`start.bat`** 批次檔！
-   - 此腳本會自動為您啟動 FastAPI 後台。
-   - 自動啟動 Python 設備模擬器。
-   - 自動啟動 React + Vite 開發伺服器，並**自動開啟瀏覽器**跳轉至 Dashboard 畫面。
-
-#### 手動啟動 (Linux/macOS)
-若不使用 `start.bat`，您可開啟三個終端機：
-1. **啟動 API**: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
-2. **啟動 模擬器**: `python simulator/equipment_simulator.py`
-3. **啟動 React 前端**: `cd dashboard-react && npm run dev`
+2. **啟動 設備模擬器 (Equipment Simulator)**
+   （請確認 API 啟動完成後再執行）
+   ```bash
+   python simulator/equipment_simulator.py
+   ```
+3. **啟動 現代化監控面板 (React + Vite)**
+   ```bash
+   cd dashboard-react
+   npm run dev
+   ```
 
 ### 存取系統
+待上述三個服務啟動完成後，您可透過瀏覽器前往：
 - **現代化儀表板 (React)**: http://localhost:5173
 - **API 文件 (Swagger)**: http://localhost:8000/docs
-- **舊版靜態監控 (Streamlit)**: http://localhost:8501 (需手動執行 `streamlit run dashboard/streamlit_app.py`)
+- **舊版靜態監控 (Streamlit)**: http://localhost:8501 (需另外手動執行 `streamlit run dashboard/streamlit_app.py`)
 
 ## Line Bot Setup (Webhook 整合)
 要啟用 Line Bot 功能，請依照以下步驟設定：
