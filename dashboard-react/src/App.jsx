@@ -398,18 +398,6 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rules.map(r => (
-                    <tr key={r.id}>
-                      <td>{r.eqp_id || 'ALL'}</td>
-                      <td>{r.sensor_name}</td>
-                      <td>{r.condition}</td>
-                      <td>{r.threshold_value}</td>
-                      <td>{r.alarm_code}</td>
-                      <td>{r.alarm_message}</td>
-                      <td><button onClick={() => deleteRule(r.id)}>Delete</button></td>
-                    </tr>
-                  ))}
-                  {rules.length === 0 && <tr><td colSpan="7">No rules</td></tr>}
                   <tr className="add-rule-row">
                     <td>
                       <select className="inline-input" value={ruleEqp} onChange={e => setRuleEqp(e.target.value)}>
@@ -435,6 +423,18 @@ function App() {
                     <td><input className="inline-input" type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" /></td>
                     <td><button className="primary-btn" style={{ margin: 0 }} onClick={createRule}>Add</button></td>
                   </tr>
+                  {rules.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.eqp_id || 'ALL'}</td>
+                      <td>{r.sensor_name}</td>
+                      <td>{r.condition}</td>
+                      <td>{r.threshold_value}</td>
+                      <td>{r.alarm_code}</td>
+                      <td>{r.alarm_message}</td>
+                      <td><button onClick={() => deleteRule(r.id)}>Delete</button></td>
+                    </tr>
+                  ))}
+                  {rules.length === 0 && <tr><td colSpan="7">No rules</td></tr>}
                 </tbody>
               </table>
             </div>
