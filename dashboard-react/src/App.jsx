@@ -358,7 +358,7 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                 <button 
                   className="primary-btn" 
-                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff' }}
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff', visibility: alarmPage === 1 ? 'hidden' : 'visible' }}
                   onClick={() => setAlarmPage(p => Math.max(1, p - 1))}
                   disabled={alarmPage === 1}
                 >
@@ -367,7 +367,7 @@ function App() {
                 <span style={{ color: '#9ca3af' }}>Page {alarmPage} of {totalPages}</span>
                 <button 
                   className="primary-btn" 
-                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff' }}
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff', visibility: alarmPage === totalPages ? 'hidden' : 'visible' }}
                   onClick={() => setAlarmPage(p => Math.min(totalPages, p + 1))}
                   disabled={alarmPage === totalPages}
                 >
