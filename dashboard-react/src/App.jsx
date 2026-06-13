@@ -23,6 +23,7 @@ function App() {
   const [ruleValue, setRuleValue] = useState('85');
   const [ruleCode, setRuleCode] = useState('ALM-001');
   const [ruleMsg, setRuleMsg] = useState('Temperature too high');
+  const [ruleEqp, setRuleEqp] = useState('ALL');
 
   const fetchEquipments = async () => {
     try {
@@ -79,17 +80,21 @@ function App() {
   };
 
   const createRule = async () => {
+    const payload = {
+      sensor_name: ruleSensor,
+      condition: ruleCondition,
+      threshold_value: parseFloat(ruleValue),
+      alarm_code: ruleCode,
+      alarm_level: 'HIGH',
+      alarm_message: ruleMsg
+    };
+    if (ruleEqp !== 'ALL') {
+      payload.eqp_id = ruleEqp;
+    }
     await fetch('http://localhost:8000/api/rules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sensor_name: ruleSensor,
-        condition: ruleCondition,
-        threshold_value: parseFloat(ruleValue),
-        alarm_code: ruleCode,
-        alarm_level: 'HIGH',
-        alarm_message: ruleMsg
-      })
+      body: JSON.stringify(payload)
     });
     fetchRules();
   };
@@ -380,6 +385,10 @@ function App() {
           <section className="glass-panel">
             <h2>Alarm Rules Engine</h2>
             <div className="control-group">
+              <select value={ruleEqp} onChange={e => setRuleEqp(e.target.value)}>
+                <option value="ALL">All Equipment</option>
+                {equipments.map(eqp => <option key={eqp.eqp_id} value={eqp.eqp_id}>{eqp.eqp_id}</option>)}
+              </select>
               <select value={ruleSensor} onChange={e => setRuleSensor(e.target.value)}>
                 <option value="Temperature">Temperature</option>
                 <option value="Pressure">Pressure</option>
@@ -389,8 +398,8 @@ function App() {
                 <option value="<">&lt;</option>
                 <option value="==">==</option>
               </select>
-              <input type="number" value={ruleValue} onChange={e => setRuleValue(e.target.value)} placeholder="Value" />
-              <input type="text" value={ruleCode} onChange={e => setRuleCode(e.target.value)} placeholder="Alarm Code" />
+              <input type="number" value={ruleValue} onChange={e => setRuleValue(e.target.value)} placeholder="Value" style={{ width: '80px' }} />
+              <input type="text" value={ruleCode} onChange={e => setRuleCode(e.target.value)} placeholder="Code" style={{ width: '100px' }} />
               <input type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" />
               <button className="primary-btn" onClick={createRule}>Add</button>
             </div>
@@ -398,6 +407,7 @@ function App() {
               <table>
                 <thead>
                   <tr>
+                    <th>Equipment</th>
                     <th>Sensor</th>
                     <th>Condition</th>
                     <th>Value</th>
@@ -408,6 +418,7 @@ function App() {
                 <tbody>
                   {rules.map(r => (
                     <tr key={r.id}>
+                      <td>{r.eqp_id || 'ALL'}</td>
                       <td>{r.sensor_name}</td>
                       <td>{r.condition}</td>
                       <td>{r.threshold_value}</td>
@@ -415,7 +426,7 @@ function App() {
                       <td><button onClick={() => deleteRule(r.id)}>Delete</button></td>
                     </tr>
                   ))}
-                  {rules.length === 0 && <tr><td colSpan="5">No rules</td></tr>}
+                  {rules.length === 0 && <tr><td colSpan="6">No rules</td></tr>}
                 </tbody>
               </table>
             </div>
