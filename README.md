@@ -52,7 +52,16 @@ Equipment Simulator -> CIM Host API (FastAPI + WebSockets) -> PostgreSQL/SQLite 
 
 ## Quick Start
 
-### 啟動步驟
+本專案提供 **Docker** 與 **本機手動** 兩種啟動方式供您選擇。
+
+### 方式一：使用 Docker Compose 啟動 (推薦)
+若您已安裝 Docker 與 Docker Compose，可直接在專案根目錄執行以下指令啟動資料庫與 API：
+```bash
+docker-compose up -d --build
+```
+> **Note**: 使用 Docker 啟動後，API 服務將自動運行於 `8000` port。接著請跳至下方執行**方式二**的第 2 步 (模擬器) 與第 3 步 (前端面板)。
+
+### 方式二：純本機手動啟動
 
 在啟動專案前，請開啟三個終端機 (Terminal) 分別啟動下列三個核心組件：
 

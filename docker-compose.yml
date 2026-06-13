@@ -24,17 +24,25 @@ services:
     volumes:
       - .:/app
 
-  dashboard:
+  simulator:
     build: .
-    command: streamlit run dashboard/streamlit_app.py
-    ports:
-      - "8501:8501"
+    command: python simulator/equipment_simulator.py
     environment:
       - API_URL=http://api:8000
     depends_on:
       - api
     volumes:
       - .:/app
+
+  dashboard-react:
+    build: ./dashboard-react
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    volumes:
+      - ./dashboard-react:/app
+      - /app/node_modules
 
 volumes:
   postgres_data:

@@ -4,7 +4,9 @@ import requests
 import datetime
 import threading
 
-API_BASE_URL = "http://localhost:8000/api"
+import os
+
+API_BASE_URL = os.getenv("API_URL", "http://localhost:8000") + "/api"
 
 EQUIPMENTS = [
     {"eqp_id": "EQP-ETCH-001", "eqp_name": "Etcher 1", "eqp_type": "ETCH", "location": "FAB1"},
