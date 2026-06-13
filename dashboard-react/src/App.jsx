@@ -14,6 +14,7 @@ function App() {
   const [selectedSensorName, setSelectedSensorName] = useState('Temperature');
   const [selectedEqp, setSelectedEqp] = useState('');
   const [alarmPage, setAlarmPage] = useState(1);
+  const [rulePage, setRulePage] = useState(1);
   const [cmdName, setCmdName] = useState('START');
   const [newRecipe, setNewRecipe] = useState('RCP-NEW-001');
 
@@ -322,6 +323,10 @@ function App() {
       const totalPages = Math.ceil(alarms.length / alarmsPerPage) || 1;
       const currentAlarms = alarms.slice((alarmPage - 1) * alarmsPerPage, alarmPage * alarmsPerPage);
 
+      const rulesPerPage = 10;
+      const totalRulePages = Math.ceil(rules.length / rulesPerPage) || 1;
+      const currentRules = rules.slice((rulePage - 1) * rulesPerPage, rulePage * rulesPerPage);
+
       return (
         <div className="grid-2-col">
           <section className="glass-panel">
@@ -423,7 +428,7 @@ function App() {
                     <td><input className="inline-input" type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" /></td>
                     <td><button className="primary-btn" style={{ margin: 0 }} onClick={createRule}>Add</button></td>
                   </tr>
-                  {rules.map(r => (
+                  {currentRules.map(r => (
                     <tr key={r.id}>
                       <td>{r.eqp_id || 'ALL'}</td>
                       <td>{r.sensor_name}</td>
@@ -438,6 +443,27 @@ function App() {
                 </tbody>
               </table>
             </div>
+            {rules.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                <button 
+                  className="primary-btn" 
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff', visibility: rulePage === 1 ? 'hidden' : 'visible' }}
+                  onClick={() => setRulePage(p => Math.max(1, p - 1))}
+                  disabled={rulePage === 1}
+                >
+                  Prev
+                </button>
+                <span style={{ color: '#9ca3af' }}>Page {rulePage} of {totalRulePages}</span>
+                <button 
+                  className="primary-btn" 
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff', visibility: rulePage === totalRulePages ? 'hidden' : 'visible' }}
+                  onClick={() => setRulePage(p => Math.min(totalRulePages, p + 1))}
+                  disabled={rulePage === totalRulePages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </section>
         </div>
       );
