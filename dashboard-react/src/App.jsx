@@ -13,6 +13,7 @@ function App() {
   const [sensors, setSensors] = useState([]);
   const [selectedSensorName, setSelectedSensorName] = useState('Temperature');
   const [selectedEqp, setSelectedEqp] = useState('');
+  const [alarmPage, setAlarmPage] = useState(1);
   const [cmdName, setCmdName] = useState('START');
   const [newRecipe, setNewRecipe] = useState('RCP-NEW-001');
 
@@ -145,6 +146,7 @@ function App() {
 
   useEffect(() => {
     if (selectedEqp) {
+      setAlarmPage(1);
       fetchCommands(selectedEqp);
       fetchAlarms(selectedEqp);
       fetchSensors(selectedEqp);
@@ -311,6 +313,10 @@ function App() {
     }
 
     if (page === 'Alarms') {
+      const alarmsPerPage = 10;
+      const totalPages = Math.ceil(alarms.length / alarmsPerPage) || 1;
+      const currentAlarms = alarms.slice((alarmPage - 1) * alarmsPerPage, alarmPage * alarmsPerPage);
+
       return (
         <div className="grid-2-col">
           <section className="glass-panel">
@@ -335,7 +341,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {alarms.map((al, idx) => (
+                  {currentAlarms.map((al, idx) => (
                     <tr key={idx} className={`alarm-${al.alarm_level?.toLowerCase()}`}>
                       <td>{new Date(al.occurred_at + 'Z').toLocaleString()}</td>
                       <td>{al.alarm_code}</td>
@@ -348,6 +354,27 @@ function App() {
                 </tbody>
               </table>
             </div>
+            {alarms.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+                <button 
+                  className="primary-btn" 
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff' }}
+                  onClick={() => setAlarmPage(p => Math.max(1, p - 1))}
+                  disabled={alarmPage === 1}
+                >
+                  Prev
+                </button>
+                <span style={{ color: '#9ca3af' }}>Page {alarmPage} of {totalPages}</span>
+                <button 
+                  className="primary-btn" 
+                  style={{ background: 'transparent', border: '1px solid var(--glass-border)', color: '#fff' }}
+                  onClick={() => setAlarmPage(p => Math.min(totalPages, p + 1))}
+                  disabled={alarmPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="glass-panel">
