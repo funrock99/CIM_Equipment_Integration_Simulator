@@ -1,0 +1,69 @@
+# 新增 Repo 與同步 GitHub 的完整步驟紀錄
+
+這份文件記錄了如何將本地端專案從零開始推送到 GitHub，以及後續日常同步的標準指令。
+
+## 階段一：首次新增並推送 Repository
+
+1. **確認 GitHub CLI 登入狀態**
+   確保您已經安裝了 `gh` 指令工具並且登入您的帳號：
+   ```bash
+   gh auth status
+   ```
+
+2. **初始化本地端 Git 並建立初始提交 (Initial Commit)**
+   在專案根目錄下依序執行：
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   ```
+
+3. **透過 GitHub CLI 建立遠端 Repo 並自動推送**
+   利用 `gh repo create` 一次完成「建立遠端專案、加入 remote、推播程式碼」三個動作：
+   ```bash
+   gh repo create CIM_Equipment_Integration_Simulator --public --source=. --remote=origin --push
+   ```
+   *(註：`--public` 代表公開專案，若要私有請改為 `--private`)*
+
+---
+
+## 階段二：修復與整理追蹤名單 (若不小心將快取檔推上雲端)
+
+如果第一次提交時 `.gitignore` 尚未設定完善，導致如 `__pycache__` 或 `*.db` 等檔案被推上雲端，可透過以下步驟清理：
+
+1. 修改 `.gitignore`，將要排除的檔案或資料夾名稱加入。
+2. 執行以下指令清除本機的 Git 快取（這不會刪除您電腦裡的實體檔案，只會將它們從 Git 的追蹤名單中剔除）：
+   ```bash
+   git rm -r --cached .
+   ```
+3. 重新加入所有檔案並提交：
+   ```bash
+   git add .
+   git commit -m "chore: update .gitignore and clean up cached files"
+   ```
+4. 將乾淨的版本推送到 GitHub：
+   ```bash
+   git push origin master
+   ```
+
+---
+
+## 階段三：日常開發的同步步驟
+
+當您修改了 `README.md` 或其他程式碼，想要將變更同步到 GitHub 時：
+
+1. **將修改的檔案加入暫存區**
+   ```bash
+   git add .
+   ```
+   *(或指定單一檔案，如 `git add README.md`)*
+
+2. **撰寫提交訊息 (Commit)**
+   ```bash
+   git commit -m "docs: update README start instructions"
+   ```
+
+3. **推送到遠端 GitHub**
+   ```bash
+   git push origin master
+   ```

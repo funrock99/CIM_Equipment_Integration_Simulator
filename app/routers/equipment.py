@@ -108,6 +108,8 @@ def report_alarm(alarm_data: schemas.EquipmentAlarmCreate, db: Session = Depends
             line_bot_api.broadcast(TextSendMessage(text=msg))
         except Exception as e:
             print(f"Line Bot broadcast failed: {e}")
+            
+    manager.broadcast_sync({"type": "ALARM_UPDATE", "eqp_id": alarm_data.eqp_id})
 
     return {"message": "Alarm logged successfully"}
 
@@ -150,6 +152,7 @@ def report_sensor(sensor_data: schemas.EquipmentSensorCreate, db: Session = Depe
                 line_bot_api.broadcast(TextSendMessage(text=msg))
             except Exception as e:
                 print(f"Line Bot broadcast failed: {e}")
+            manager.broadcast_sync({"type": "ALARM_UPDATE", "eqp_id": sensor_data.eqp_id})
 
     db.commit()
     return {"message": "Sensor data logged successfully"}

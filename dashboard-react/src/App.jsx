@@ -2,12 +2,26 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import './buttons.css'
 
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
 function App() {
+  const [page, setPage] = useState('Overview');
   const [equipments, setEquipments] = useState([]);
   const [cmdHistory, setCmdHistory] = useState({});
+  const [alarms, setAlarms] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [sensors, setSensors] = useState([]);
+  const [selectedSensorName, setSelectedSensorName] = useState('Temperature');
   const [selectedEqp, setSelectedEqp] = useState('');
   const [cmdName, setCmdName] = useState('START');
   const [newRecipe, setNewRecipe] = useState('RCP-NEW-001');
+
+  // Rule creation states
+  const [ruleSensor, setRuleSensor] = useState('Temperature');
+  const [ruleCondition, setRuleCondition] = useState('>');
+  const [ruleValue, setRuleValue] = useState('85');
+  const [ruleCode, setRuleCode] = useState('ALM-001');
+  const [ruleMsg, setRuleMsg] = useState('Temperature too high');
 
   const fetchEquipments = async () => {
     try {
@@ -25,12 +39,63 @@ function App() {
 
   const fetchCommands = async (eqpId) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/equipment/${eqpId}/commands?limit=10`);
+      const res = await fetch(`http://localhost:8000/api/equipment/${eqpId}/commands`);
       const data = await res.json();
-      setCmdHistory(prev => ({...prev, [eqpId]: data}));
+      setCmdHistory(prev => ({ ...prev, [eqpId]: data }));
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const fetchAlarms = async (eqpId) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/equipment/${eqpId}/alarms`);
+      const data = await res.json();
+      setAlarms(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSensors = async (eqpId) => {
+    try {
+      const res = await fetch(`http://localhost:8000/api/equipment/${eqpId}/sensors`);
+      const data = await res.json();
+      setSensors(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchRules = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/rules');
+      const data = await res.json();
+      setRules(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const createRule = async () => {
+    await fetch('http://localhost:8000/api/rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sensor_name: ruleSensor,
+        condition: ruleCondition,
+        threshold_value: parseFloat(ruleValue),
+        alarm_code: ruleCode,
+        alarm_level: 'HIGH',
+        alarm_message: ruleMsg
+      })
+    });
+    fetchRules();
+  };
+
+  const deleteRule = async (ruleId) => {
+    await fetch(`http://localhost:8000/api/rules/${ruleId}`, { method: 'DELETE' });
+    fetchRules();
   };
 
   const [simEnabled, setSimEnabled] = useState(true);
@@ -59,13 +124,18 @@ function App() {
   useEffect(() => {
     fetchEquipments();
     fetchSimulatorState();
+    fetchRules();
 
     const ws = new WebSocket('ws://localhost:8000/api/ws');
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      if (msg.type === 'STATUS_UPDATE' || msg.type === 'COMMAND_REPLY') {
+      if (msg.type === 'STATUS_UPDATE' || msg.type === 'COMMAND_REPLY' || msg.type === 'ALARM_UPDATE') {
         fetchEquipments();
-        if (msg.eqp_id) fetchCommands(msg.eqp_id);
+        if (msg.eqp_id) {
+          fetchCommands(msg.eqp_id);
+          fetchAlarms(msg.eqp_id);
+          fetchSensors(msg.eqp_id);
+        }
       } else if (msg.type === 'COMMAND_UPDATE') {
         if (msg.eqp_id) fetchCommands(msg.eqp_id);
       }
@@ -76,6 +146,8 @@ function App() {
   useEffect(() => {
     if (selectedEqp) {
       fetchCommands(selectedEqp);
+      fetchAlarms(selectedEqp);
+      fetchSensors(selectedEqp);
     }
   }, [selectedEqp]);
 
@@ -88,22 +160,9 @@ function App() {
     });
   };
 
-  return (
-    <div className="dashboard">
-      <header className="header">
-        <div>
-          <h1>CIM Equipment Dashboard</h1>
-          <button 
-            className={`power-btn ${simEnabled ? 'power-on' : 'power-off'}`}
-            onClick={toggleGlobalSimulator}
-          >
-            Global Simulator: {simEnabled ? 'ON' : 'OFF'}
-          </button>
-        </div>
-        <div className="badge">Live WebSocket Connection</div>
-      </header>
-      
-      <main className="main-content">
+  const renderContent = () => {
+    if (page === 'Overview') {
+      return (
         <section className="glass-panel">
           <h2>Equipment Overview</h2>
           <div className="table-container">
@@ -142,7 +201,11 @@ function App() {
             </table>
           </div>
         </section>
+      );
+    }
 
+    if (page === 'Control') {
+      return (
         <div className="bottom-grid">
           <section className="glass-panel">
             <h2>Remote Command Control</h2>
@@ -197,9 +260,181 @@ function App() {
             </div>
           </section>
         </div>
-      </main>
+      );
+    }
+
+    if (page === 'Sensors') {
+      const filteredSensors = sensors.filter(s => s.sensor_name === selectedSensorName);
+      // Format data for Recharts
+      const chartData = filteredSensors.map(s => ({
+        time: new Date(s.collected_at + 'Z').toLocaleTimeString(),
+        value: s.sensor_value
+      })).reverse(); // Reverse to get chronological order if it was DESC
+
+      return (
+        <section className="glass-panel">
+          <h2>Sensor Trends</h2>
+          <div className="control-form" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-group">
+              <label>Target Equipment</label>
+              <select value={selectedEqp} onChange={e => setSelectedEqp(e.target.value)}>
+                {equipments.map(eqp => <option key={eqp.eqp_id} value={eqp.eqp_id}>{eqp.eqp_id}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Sensor</label>
+              <select value={selectedSensorName} onChange={e => setSelectedSensorName(e.target.value)}>
+                <option value="Temperature">Temperature</option>
+                <option value="Pressure">Pressure</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style={{ height: 400, marginTop: '2rem' }}>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="time" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.9)', border: 'none', borderRadius: '8px', color: '#fff' }} />
+                  <Legend />
+                  <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p>No sensor data available.</p>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    if (page === 'Alarms') {
+      return (
+        <div className="grid-2-col">
+          <section className="glass-panel">
+            <h2>Alarm Logs</h2>
+            <div className="control-form" style={{ marginBottom: '1rem' }}>
+              <div className="form-group">
+                <label>Target Equipment</label>
+                <select value={selectedEqp} onChange={e => setSelectedEqp(e.target.value)}>
+                  {equipments.map(eqp => <option key={eqp.eqp_id} value={eqp.eqp_id}>{eqp.eqp_id}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Code</th>
+                    <th>Level</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {alarms.map((al, idx) => (
+                    <tr key={idx} className={`alarm-${al.alarm_level?.toLowerCase()}`}>
+                      <td>{new Date(al.occurred_at + 'Z').toLocaleString()}</td>
+                      <td>{al.alarm_code}</td>
+                      <td>{al.alarm_level}</td>
+                      <td>{al.alarm_message}</td>
+                      <td>{al.alarm_status}</td>
+                    </tr>
+                  ))}
+                  {alarms.length === 0 && <tr><td colSpan="5">No recent alarms</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="glass-panel">
+            <h2>Alarm Rules Engine</h2>
+            <div className="control-group">
+              <select value={ruleSensor} onChange={e => setRuleSensor(e.target.value)}>
+                <option value="Temperature">Temperature</option>
+                <option value="Pressure">Pressure</option>
+              </select>
+              <select value={ruleCondition} onChange={e => setRuleCondition(e.target.value)}>
+                <option value=">">&gt;</option>
+                <option value="<">&lt;</option>
+                <option value="==">==</option>
+              </select>
+              <input type="number" value={ruleValue} onChange={e => setRuleValue(e.target.value)} placeholder="Value" />
+              <input type="text" value={ruleCode} onChange={e => setRuleCode(e.target.value)} placeholder="Alarm Code" />
+              <input type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" />
+              <button className="primary-btn" onClick={createRule}>Add</button>
+            </div>
+            <div className="table-container" style={{ marginTop: '1rem' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sensor</th>
+                    <th>Condition</th>
+                    <th>Value</th>
+                    <th>Code</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.sensor_name}</td>
+                      <td>{r.condition}</td>
+                      <td>{r.threshold_value}</td>
+                      <td>{r.alarm_code}</td>
+                      <td><button onClick={() => deleteRule(r.id)}>Delete</button></td>
+                    </tr>
+                  ))}
+                  {rules.length === 0 && <tr><td colSpan="5">No rules</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="app-layout">
+      <aside className="sidebar">
+        <h2>Control Panel</h2>
+        <ul className="sidebar-nav">
+          <li className={page === 'Overview' ? 'active' : ''} onClick={() => setPage('Overview')}>Overview</li>
+          <li className={page === 'Control' ? 'active' : ''} onClick={() => setPage('Control')}>Remote Control</li>
+          <li className={page === 'Sensors' ? 'active' : ''} onClick={() => setPage('Sensors')}>Sensor Trends</li>
+          <li className={page === 'Alarms' ? 'active' : ''} onClick={() => setPage('Alarms')}>Alarms & Rules</li>
+        </ul>
+        <div style={{ marginTop: 'auto', paddingTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <h3 style={{ fontSize: '1rem', color: '#9ca3af', marginBottom: '1rem' }}>Simulator System</h3>
+          <button 
+            className={`power-btn ${simEnabled ? 'power-on' : 'power-off'}`}
+            onClick={toggleGlobalSimulator}
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            Power: {simEnabled ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </aside>
+
+      <div className="main-wrapper">
+        <header className="header" style={{ borderRadius: 0, margin: 0 }}>
+          <div>
+            <h1>CIM Equipment Dashboard</h1>
+          </div>
+          <div className="badge">Live WebSocket Connection</div>
+        </header>
+        
+        <main className="main-content">
+          {renderContent()}
+        </main>
+      </div>
     </div>
   )
 }
 
 export default App
+
