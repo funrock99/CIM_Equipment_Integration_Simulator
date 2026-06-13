@@ -240,7 +240,24 @@ tbody tr:hover {
   box-sizing: border-box;
 }
 
-.control-group select:focus, .control-group input:focus {
+.control-group select:focus, .form-group input:focus {
+  border-color: var(--accent);
+}
+
+.inline-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.25rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.inline-input:focus {
   border-color: var(--accent);
 }
 

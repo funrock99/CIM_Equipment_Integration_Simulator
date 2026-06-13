@@ -384,26 +384,7 @@ function App() {
 
           <section className="glass-panel">
             <h2>Alarm Rules Engine</h2>
-            <div className="control-group">
-              <select value={ruleEqp} onChange={e => setRuleEqp(e.target.value)}>
-                <option value="ALL">All Equipment</option>
-                {equipments.map(eqp => <option key={eqp.eqp_id} value={eqp.eqp_id}>{eqp.eqp_id}</option>)}
-              </select>
-              <select value={ruleSensor} onChange={e => setRuleSensor(e.target.value)}>
-                <option value="Temperature">Temperature</option>
-                <option value="Pressure">Pressure</option>
-              </select>
-              <select value={ruleCondition} onChange={e => setRuleCondition(e.target.value)}>
-                <option value=">">&gt;</option>
-                <option value="<">&lt;</option>
-                <option value="==">==</option>
-              </select>
-              <input type="number" value={ruleValue} onChange={e => setRuleValue(e.target.value)} placeholder="Value" style={{ width: '80px' }} />
-              <input type="text" value={ruleCode} onChange={e => setRuleCode(e.target.value)} placeholder="Code" style={{ width: '100px' }} />
-              <input type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" />
-              <button className="primary-btn" onClick={createRule}>Add</button>
-            </div>
-            <div className="table-container" style={{ marginTop: '1rem' }}>
+            <div className="table-container" style={{ marginTop: '1rem', overflow: 'visible' }}>
               <table>
                 <thead>
                   <tr>
@@ -412,6 +393,7 @@ function App() {
                     <th>Condition</th>
                     <th>Value</th>
                     <th>Code</th>
+                    <th>Message</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -423,10 +405,36 @@ function App() {
                       <td>{r.condition}</td>
                       <td>{r.threshold_value}</td>
                       <td>{r.alarm_code}</td>
+                      <td>{r.alarm_message}</td>
                       <td><button onClick={() => deleteRule(r.id)}>Delete</button></td>
                     </tr>
                   ))}
-                  {rules.length === 0 && <tr><td colSpan="6">No rules</td></tr>}
+                  {rules.length === 0 && <tr><td colSpan="7">No rules</td></tr>}
+                  <tr className="add-rule-row">
+                    <td>
+                      <select className="inline-input" value={ruleEqp} onChange={e => setRuleEqp(e.target.value)}>
+                        <option value="ALL">All</option>
+                        {equipments.map(eqp => <option key={eqp.eqp_id} value={eqp.eqp_id}>{eqp.eqp_id}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <select className="inline-input" value={ruleSensor} onChange={e => setRuleSensor(e.target.value)}>
+                        <option value="Temperature">Temperature</option>
+                        <option value="Pressure">Pressure</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select className="inline-input" value={ruleCondition} onChange={e => setRuleCondition(e.target.value)}>
+                        <option value=">">&gt;</option>
+                        <option value="<">&lt;</option>
+                        <option value="==">==</option>
+                      </select>
+                    </td>
+                    <td><input className="inline-input" type="number" value={ruleValue} onChange={e => setRuleValue(e.target.value)} placeholder="Value" /></td>
+                    <td><input className="inline-input" type="text" value={ruleCode} onChange={e => setRuleCode(e.target.value)} placeholder="Code" /></td>
+                    <td><input className="inline-input" type="text" value={ruleMsg} onChange={e => setRuleMsg(e.target.value)} placeholder="Message" /></td>
+                    <td><button className="primary-btn" style={{ margin: 0 }} onClick={createRule}>Add</button></td>
+                  </tr>
                 </tbody>
               </table>
             </div>
