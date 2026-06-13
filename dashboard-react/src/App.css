@@ -222,16 +222,42 @@ tbody tr:hover {
   border-color: var(--accent);
 }
 
+.control-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.control-group select, .control-group input {
+  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.5rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+  height: 42px;
+  box-sizing: border-box;
+}
+
+.control-group select:focus, .control-group input:focus {
+  border-color: var(--accent);
+}
+
 .primary-btn {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 0.75rem;
+  padding: 0 1rem;
   border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-top: 0.5rem;
+  height: 42px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .primary-btn:hover {
